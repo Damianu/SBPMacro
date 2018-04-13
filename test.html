@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="SBPMacro.js"></script>
+    <script src="debugOutput.js"></script>
+    <style>
+        html,
+        body {
+            overflow: hidden;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        body {
+            height: 100%;
+        }
+
+        textarea,
+        .flex {
+            display: flex;
+            flex: 1;
+        }
+
+        #fields {
+            flex: 1 0 100%;
+        }
+
+        #labels,
+        #fields {
+            display: flex;
+            flex-direction: row;
+        }
+
+        #wrap {
+            flex-direction: column;
+            display: flex;
+            min-height: 50%;
+        }
+    </style>
+    <div id="wrap">
+        <div id="labels">
+            <div class="flex">Source</div>
+            <div class="flex">Javascript</div>
+            <div class="flex" style="flex:0.5;">Output</div>
+        </div>
+        <div id="fields">
+
+        </div>
+        <div id="exceptions">
+
+        </div>
+    </div>
+</head>
+
+<body>
+
+    <script type="text/javascript">
+        var defaultCode = `
+$somevar = 20
+$str = 2
+@somevar + 2d20 + @str
+`;
+        var wrap = $("#fields");
+        var sourceField = $("<textarea>").appendTo(wrap);
+        var jsField = $("<textarea>").appendTo(wrap);
+        jsField.attr("readonly", true);
+        var outputField = $("<textarea>").appendTo(wrap);
+        outputField.attr("readonly", true);
+        var compileButton = $("<button>").appendTo($("body"));
+        compileButton.text("Compile & Run!");
+
+        function getCode() {
+            return sourceField.val();
+        }
+
+        function setCode(val) {
+            return sourceField.val(val);
+        }
+
+        function setTranspileOutput(val) {
+            jsField.val(val);
+        }
+
+        function setRunOutput(val) {
+            outputField.val(val);
+        }
+
+        function setExceptionsOutput(val) {
+            $("#exceptions").text(val);
+        }
+
+        outputField.css("flex", "0.5");
+
+
+        var sandboxFrame = document.createElement('iframe');
+        sandboxFrame.src = "about:blank";
+        sandboxFrame.style.cssText = "display:none;";
+        document.body.appendChild(sandboxFrame);
+
+        function SandboxedFunc(code) {
+            var F = sandboxFrame.contentWindow.Function,
+                args = Object.keys(sandboxFrame.contentWindow).join();
+            return F("__ARG_VAR", "sandboxCMDS", args, code);
+        }
+
+        //Default Code:
+        setCode(defaultCode);
+        var Tokenizer = SBPMacro.Tokenizer;
+        var parser = new SBPMacro.Parser();
+        var transpiler = new SBPMacro.Transpiler();
+        compileButton.click(function () {
+            try {
+                console.clear();
+                var src = getCode();
+                console.log("==Source:\n", src);
+
+                //*Preprocessing*//
+                src = src.replace(/\/\/[^\n]+/g, ""); //Removing comments
+                src = src.replace(/^\n/g, ""); //Remove starting new line
+                src = src.replace(/\n$/g, ""); //Remove ending new line
+
+                src = src.replace(/([^;])\n+/g, "$1;"); //Replacing new lines with ;
+                console.log("==Preprocessed:\n", src);
+
+                var tokens = Tokenizer.tokenize(src);
+                console.log("Lexing 1st step:", tokens);
+
+                var stack = parser.parseScope(tokens);
+                console.log("Parsing result:", stack);
+                console.log("==Parsed:\n", uglyDebug(stack));
+
+
+                console.log("==Javascript Output:")
+                var jsCode = transpiler.run(stack);
+                setTranspileOutput(jsCode);
+                console.log(jsCode);
+                transpiledFunc = new SandboxedFunc(jsCode);
+
+
+                console.log("==Compiled&Sandboxed:\n", transpiledFunc);
+                var funcs = {
+                    roll: function (...args) {
+                        return 20; //Chosen by fair d20 roll
+                    },
+                    testcmd: function (...args) {
+                        console.log("Testcmd:", args);
+                        return 1;
+                    }
+                }
+                var context = {
+                    "Test": "works"
+                };
+                var ret = transpiledFunc(context, funcs);
+                var out = "Return: " + ret + "\n" + "\n\nContext: " + JSON.stringify(context, null, 2);
+                setRunOutput(out);
+            } catch (e) {
+                setExceptionsOutput(e.message);
+                throw e;
+            }
+
+        });
+    </script>
+
+</html>
