@@ -235,9 +235,8 @@ SBPMacro = (function () {
                     this.nextChar();
 
                     this.addToken(TokenType.GROUP, token, true);
-                } else if (this.nextPattern(/([0-9]+d[0-9]+[\S^;]*)[\s;]/y)) //Rolls
+                } else if (this.nextPattern(/([0-9]+d[0-9]+[\S]*)/y)) //Rolls
                 {
-                    console.log("Roll>", this.result[1]);
                     this.addToken(TokenType.GROUP_DONTKEEP, '/roll ' + '"' + this.result[1] + '"');
                 } else if (this.nextPattern(/[0-9%.]+/y)) //Numbers
                 {
