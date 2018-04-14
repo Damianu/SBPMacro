@@ -125,6 +125,7 @@ $str = 2
                 src = src.replace(/\/\/[^\n]+/g, ""); //Removing comments
                 src = src.replace(/^\n/g, ""); //Remove starting new line
                 src = src.replace(/\n$/g, ""); //Remove ending new line
+                src = src.replace("`", "'"); //Swap ` to '
 
                 src = src.replace(/([^;])\n+/g, "$1;"); //Replacing new lines with ;
                 console.log("==Preprocessed:\n", src);
@@ -160,6 +161,7 @@ $str = 2
                 var ret = transpiledFunc(context, funcs);
                 var out = "Return: " + ret + "\n" + "\n\nContext: " + JSON.stringify(context, null, 2);
                 setRunOutput(out);
+                setExceptionsOutput(""); // Clear previous exception output
             } catch (e) {
                 setExceptionsOutput(e.message);
                 throw e;
